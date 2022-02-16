@@ -1,7 +1,11 @@
-FROM alpine:3.14
+FROM golang:1.17-alpine
+
+ADD . /workdir
 
 WORKDIR /workdir
 
-COPY build/client ./client
+RUN go mod download
 
-CMD [ "./client" ]
+RUN go build -o /client cmd/client/main.go
+
+CMD [ "/client" ]

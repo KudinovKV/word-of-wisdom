@@ -3,29 +3,28 @@ PROJECT_NAME := $(shell basename "$(PWD)")
 GO=go
 SUDO=sudo
 DOCKER=docker
-BUILD_PATH=build
+BIN_PATH=bin
 DEPLOYMENT_PATH=deployments
 SERVER_NAME=server
 CLIENT_NAME=client
-POW_SERVER_PORT?=9999
 
 .PHONY: build-bin-server
 build-bin-server:
 	@echo "> Build server..."
-	@$(GO) build -o $(BUILD_PATH)/$(SERVER_NAME) cmd/$(SERVER_NAME)/main.go
+	@$(GO) build -o $(BIN_PATH)/$(SERVER_NAME) cmd/$(SERVER_NAME)/main.go
 
 .PHONY: build-bin-client
 build-bin-client:
 	@echo "> Build client..."
-	@$(GO) build -o $(BUILD_PATH)/$(CLIENT_NAME) cmd/$(CLIENT_NAME)/main.go
+	@$(GO) build -o $(BIN_PATH)/$(CLIENT_NAME) cmd/$(CLIENT_NAME)/main.go
 
 .PHONY: build-bin
 build-bin: build-bin-server build-bin-client
 
 .PHONY: clean
 clean:
-	@echo "> Clean build..."
-	@rm -rf $(BUILD_PATH)
+	@echo "> Clean bin..."
+	@rm -rf $(BIN_PATH)
 
 .PHONY: build-image-server
 build-image-server: build-bin-server
@@ -55,18 +54,23 @@ delete-image-client:
 .PHONY: delete-images
 delete-images: delete-image-server delete-image-client
 
-.PHONY: run-server
-run-server: build-image-server
-	$(SUDO) $(DOCKER) run \
+.PHONY: start-server
+start-server: build-image-server
+	@$(SUDO) $(DOCKER) run \
+		--detach \
+		--network=host \
+		--rm \
 		--name $(PROJECT_NAME)-$(SERVER_NAME) \
-		--publish $(POW_SERVER_PORT):$(POW_SERVER_PORT) \
-		--env POW_SERVER_PORT=$(POW_SERVER_PORT) \
 		$(PROJECT_NAME)-$(SERVER_NAME):$(VERSION)
+
+.PHONY: stop-server
+stop-server:
+	@$(SUDO) $(DOCKER) rm --force $(PROJECT_NAME)-$(SERVER_NAME)
 
 .PHONY: run-client
 run-client: build-image-client
-	$(SUDO) $(DOCKER) run \
+	@$(SUDO) $(DOCKER) run \
+		--network=host \
+		--rm \
 		--name $(PROJECT_NAME)-$(CLIENT_NAME) \
-		--publish $(POW_SERVER_PORT):$(POW_SERVER_PORT) \
-		--env POW_SERVER_PORT=$(POW_SERVER_PORT) \
 		$(PROJECT_NAME)-$(CLIENT_NAME):$(VERSION)
